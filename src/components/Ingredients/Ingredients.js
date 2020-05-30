@@ -1,19 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from "react";
+import IngredientForm from "./IngredientForm";
+import Search from "./Search";
+import IngredientList from "./IngredientList";
 
-import IngredientForm from './IngredientForm';
-import Search from './Search';
+const Ingredients = () => {
+  const [userIngredients, setUserIngredients] = useState([]);
 
-function Ingredients() {
+  useEffect(() => {
+    fetch(`https://hooks-primer.firebaseio.com/ingredients.json`)
+      .then(res => res.json())
+      .then(resData => {
+        let responseArray = [];
+
+        for (let item in resData) {
+          responseArray.push({
+            id: item,
+            title: resData[item].title,
+            amount: resData[item].amount
+          });
+        }
+        setUserIngredients(responseArray);
+      });
+  }, []);
+
+  let onAddUnserIngredients = ingredient => {
+    fetch(`https://hooks-primer.firebaseio.com/ingredients.json`, {
+      method: "post",
+      body: JSON.stringify(ingredient),
+      contentType: "application/json"
+    })
+      .then(res => res.json)
+      .then(resData => {
+        setUserIngredients(prev => [
+          ...prev,
+          {
+            id: resData.name,
+            title: ingredient.title,
+            amount: ingredient.amount
+          }
+        ]);
+      });
+  };
   return (
     <div className="App">
-      <IngredientForm />
+      <IngredientForm addUserIngredients={onAddUnserIngredients} />
 
       <section>
         <Search />
+        <IngredientList ingredients={userIngredients} onRemoveItem={() => {}} />
         {/* Need to add list here! */}
       </section>
     </div>
   );
-}
+};
 
 export default Ingredients;
