@@ -1,33 +1,51 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useReducer } from "react";
 import IngredientForm from "./IngredientForm";
 import Search from "./Search";
 import IngredientList from "./IngredientList";
 
+const ingredientReducer = (currentState, action) => {
+  switch (action.type) {
+    case "SET":
+      return action.ingredients;
+    case "ADD":
+      return [...currentState, action.ingredient];
+    case "DELETE":
+      return currentState.filter(item => item.id !== action.id);
+  }
+};
+
+const httpReducer = (currentState, action) => {
+  switch (action.type) {
+    case "SENT":
+      return { error: null, loading: true };
+    case "RESPONSE":
+      return { ...currentState, loading: false };
+    case "ERROR":
+      return { loading: false, error: action.msg };
+    case "CLEAR":
+      return { ...currentState, error: null };
+  }
+};
+
 const Ingredients = () => {
-  const [userIngredients, setUserIngredients] = useState([]);
+  let [userIngredients, dispatch] = useReducer(ingredientReducer, []);
 
-  useEffect(() => {
-    fetch(`https://hooks-primer.firebaseio.com/ingredients.json`)
-      .then(res => res.json())
-      .then(resData => {
-        let responseArray = [];
+  const [httpStates, httpDispatch] = useReducer(httpReducer, {
+    loading: false,
+    error: null
+  });
 
-        for (let item in resData) {
-          responseArray.push({
-            id: item,
-            title: resData[item].title,
-            amount: resData[item].amount
-          });
-        }
-        setUserIngredients(responseArray);
-      });
+  let searchFilter = useCallback(ingredients => {
+    dispatch({ type: "SET", ingredients });
   }, []);
 
-  let searchFilter = ingredients => {
-    setUserIngredients(ingredients);
-  };
+  useEffect(() => {
+    console.log("component rerendered");
+    console.log(httpStates);
+  });
 
   let onAddUnserIngredients = ingredient => {
+    httpDispatch({ type: "SENT" });
     fetch(`https://hooks-primer.firebaseio.com/ingredients.json`, {
       method: "post",
       body: JSON.stringify(ingredient),
@@ -35,23 +53,43 @@ const Ingredients = () => {
     })
       .then(res => res.json)
       .then(resData => {
-        setUserIngredients(prev => [
-          ...prev,
-          {
+        httpDispatch({ type: "RESPONSE" });
+
+        dispatch({
+          type: "ADD",
+          ingredient: {
             id: resData.name,
             title: ingredient.title,
             amount: ingredient.amount
           }
-        ]);
+        });
       });
   };
+
+  let onRemoveItem = id => {
+    httpDispatch({ type: "SENT" });
+    fetch(`https://hooks-primer.firebaseio.com/ingredients/${id}.json`, {
+      method: "DELETE"
+    }).then(res => {
+      httpDispatch({ type: "RESPONSE" });
+      // let arrayAfterRemoval = userIngredients.filter(item => item.id !== id);
+      dispatch({ type: "DELETE", id });
+    });
+  };
+
   return (
     <div className="App">
-      <IngredientForm addUserIngredients={onAddUnserIngredients} />
+      <IngredientForm
+        addUserIngredients={onAddUnserIngredients}
+        loading={httpStates.loading}
+      />
 
       <section>
         <Search searchFilter={searchFilter} />
-        <IngredientList ingredients={userIngredients} onRemoveItem={() => {}} />
+        <IngredientList
+          ingredients={userIngredients}
+          onRemoveItem={onRemoveItem}
+        />
         {/* Need to add list here! */}
       </section>
     </div>
