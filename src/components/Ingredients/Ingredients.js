@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useReducer } from "react";
+import React, { useEffect, useCallback, useReducer } from "react";
 import IngredientForm from "./IngredientForm";
 import Search from "./Search";
 import IngredientList from "./IngredientList";
@@ -11,6 +11,8 @@ const ingredientReducer = (currentState, action) => {
       return [...currentState, action.ingredient];
     case "DELETE":
       return currentState.filter(item => item.id !== action.id);
+    default:
+      return "error";
   }
 };
 
@@ -24,6 +26,8 @@ const httpReducer = (currentState, action) => {
       return { loading: false, error: action.msg };
     case "CLEAR":
       return { ...currentState, error: null };
+    default:
+      return "error";
   }
 };
 
@@ -72,7 +76,6 @@ const Ingredients = () => {
       method: "DELETE"
     }).then(res => {
       httpDispatch({ type: "RESPONSE" });
-      // let arrayAfterRemoval = userIngredients.filter(item => item.id !== id);
       dispatch({ type: "DELETE", id });
     });
   };
